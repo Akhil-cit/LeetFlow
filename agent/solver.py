@@ -13,8 +13,9 @@ class AISolver:
             # We use Groq because it has a generous free tier and blazing fast inference
             self.client = Groq(api_key=self.api_key)
         
-        # Use the newest available Llama model on Groq's free tier
-        self.model = "meta-llama/llama-4-scout-17b-16e-instruct"
+        # openai/gpt-oss-120b is a 120B parameter model available on Groq's free tier
+        # Excellent at competitive programming and C++
+        self.model = "openai/gpt-oss-120b"
 
     def solve(self, problem):
         logger.info("Sending problem to AI solver...")
