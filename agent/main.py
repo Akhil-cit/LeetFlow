@@ -40,12 +40,16 @@ def main():
     with BrowserContext() as page:
         lc = LeetCode(page)
         
-        # Phase 5/14: Cookie Authentication
-        success = lc.login(config.LEETCODE_SESSION)
+        # Phase 5/14: Authentication (tries cookie first, falls back to credentials)
+        success = lc.login(
+            session_cookie=config.LEETCODE_SESSION,
+            username=config.LEETCODE_USERNAME,
+            password=config.LEETCODE_PASSWORD
+        )
         if not success:
             logger.error("Halting agent due to login failure.")
             import sys
-            sys.exit(1) # Fail the GitHub Action so it turns red!
+            sys.exit(1)
             
         # Navigate directly to the extracted problem page
         logger.info(f"Navigating to problem page: {problem['link']}")

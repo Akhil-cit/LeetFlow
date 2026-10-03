@@ -6,6 +6,8 @@ load_dotenv()
 
 class Config:
     LEETCODE_SESSION = os.getenv('LEETCODE_SESSION')
+    LEETCODE_USERNAME = os.getenv('LEETCODE_USERNAME')
+    LEETCODE_PASSWORD = os.getenv('LEETCODE_PASSWORD')
     AI_API_KEY = os.getenv('AI_API_KEY')
     
     TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')

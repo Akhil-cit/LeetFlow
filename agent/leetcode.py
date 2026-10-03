@@ -5,38 +5,75 @@ class LeetCode:
         self.page = page
         self.base_url = "https://leetcode.com"
 
-    def login(self, session_cookie):
-        logger.info("Attempting login via Session Cookie...")
-        if not session_cookie:
-            logger.error("Missing LEETCODE_SESSION cookie in secrets!")
-            return False
+    def login(self, session_cookie=None, username=None, password=None):
+        logger.info("Attempting authentication...")
 
-        try:
-            # Set the session cookie directly in the browser context
-            self.page.context.add_cookies([
-                {
+        # Strategy 1: If a session cookie is provided, try it first (fastest)
+        if session_cookie:
+            try:
+                self.page.context.add_cookies([{
                     "name": "LEETCODE_SESSION",
                     "value": session_cookie,
                     "domain": ".leetcode.com",
                     "path": "/"
-                }
-            ])
-            
-            # Go to homepage to verify
-            self.page.goto(self.base_url, timeout=60000)
-            self.page.wait_for_load_state("domcontentloaded")
-            
-            # Check if we are actually logged in by looking for the premium/profile navbar
-            # If the sign-in button is still there, the cookie is invalid or expired
-            if self.page.locator("a[href='/accounts/login/']").count() > 0:
-                logger.error("Session cookie is invalid or expired! Still seeing Sign In button.")
-                return False
+                }])
+                self.page.goto(self.base_url, timeout=60000)
+                self.page.wait_for_load_state("domcontentloaded")
+                if self.page.locator("a[href='/accounts/login/']").count() == 0:
+                    logger.info("Cookie Authentication successful!")
+                    return True
+                logger.warning("Session cookie expired or invalid. Falling back to credentials...")
+            except Exception as e:
+                logger.warning(f"Cookie auth failed: {e}. Falling back to credentials...")
+
+        # Strategy 2: Use LeetCode GraphQL sign-in API directly (no Cloudflare page)
+        if username and password:
+            try:
+                import requests as req
                 
-            logger.info("Cookie Authentication successful!")
-            return True
-        except Exception as e:
-            logger.error(f"Authentication failed: {e}")
-            return False
+                # First get a CSRF token from the login page
+                client = req.Session()
+                client.get("https://leetcode.com/accounts/login/", headers={"User-Agent": "Mozilla/5.0"})
+                csrf = client.cookies.get("csrftoken", "")
+                
+                # POST credentials
+                resp = client.post(
+                    "https://leetcode.com/accounts/login/",
+                    data={
+                        "login": username,
+                        "password": password,
+                        "csrfmiddlewaretoken": csrf,
+                    },
+                    headers={
+                        "Referer": "https://leetcode.com/accounts/login/",
+                        "User-Agent": "Mozilla/5.0",
+                        "X-CSRFToken": csrf
+                    },
+                    allow_redirects=True
+                )
+                
+                session_val = client.cookies.get("LEETCODE_SESSION")
+                new_csrf = client.cookies.get("csrftoken", "")
+                
+                if session_val:
+                    logger.info("Credential login successful! Injecting session into browser...")
+                    self.page.context.add_cookies([
+                        {"name": "LEETCODE_SESSION", "value": session_val, "domain": ".leetcode.com", "path": "/"},
+                        {"name": "csrftoken", "value": new_csrf, "domain": ".leetcode.com", "path": "/"}
+                    ])
+                    self.page.goto(self.base_url, timeout=60000)
+                    self.page.wait_for_load_state("domcontentloaded")
+                    logger.info("Browser authenticated successfully via credentials!")
+                    return True
+                else:
+                    logger.error("Credential login failed — could not obtain session cookie from response.")
+                    return False
+            except Exception as e:
+                logger.error(f"Credential authentication failed: {e}")
+                return False
+
+        logger.error("No valid authentication method available (no session cookie and no credentials).")
+        return False
 
     def goto_home(self):
         logger.info("Navigating to LeetCode homepage...")
