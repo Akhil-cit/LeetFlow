@@ -61,6 +61,9 @@ def main():
         while attempt <= MAX_ATTEMPTS:
             logger.info(f"--- Attempt {attempt} of {MAX_ATTEMPTS} ---")
             
+            # Ensure C++ is selected in the editor
+            lc.set_language_cpp()
+            
             # Phase 8: Insert the AI-generated code
             success = lc.insert_code(solution['code'])
             if not success:

@@ -67,34 +67,90 @@ class LeetCode:
             logger.error(f"Failed to insert code: {e}")
             return False
 
+    def set_language_cpp(self):
+        """Ensure C++ is selected as the language."""
+        try:
+            # Look for language selector button
+            lang_btn = self.page.locator("button.rounded.items-center:has-text('C++')")
+            if lang_btn.count() > 0:
+                logger.info("C++ already selected.")
+                return
+            
+            # Try clicking the language dropdown
+            dropdown = self.page.locator("[data-e2e-locator='code-lang-button']")
+            if dropdown.count() == 0:
+                dropdown = self.page.locator("button.rounded").filter(has_text=lambda t: any(lang in t for lang in ['Python', 'Java', 'C', 'Go', 'Rust']))
+            if dropdown.count() > 0:
+                dropdown.first.click()
+                self.page.wait_for_timeout(500)
+                cpp_option = self.page.locator("div[role='option']:has-text('C++'), li:has-text('C++')")
+                if cpp_option.count() > 0:
+                    cpp_option.first.click()
+                    self.page.wait_for_timeout(500)
+                    logger.info("Switched to C++.")
+        except Exception as e:
+            logger.info(f"Language switch skipped: {e}")
+
     def test_solution(self):
         logger.info("Clicking the 'Run' button to test the solution...")
         
         try:
-            # Click the Run button
+            # Click the Run button - try multiple selectors
             run_btn = self.page.locator("button[data-e2e-locator='console-run-button']")
             if run_btn.count() == 0:
-                run_btn = self.page.locator("button:has-text('Run')").first
-                
-            run_btn.click()
+                run_btn = self.page.locator("button:has-text('Run Code'), button:has-text('Run')")
+            run_btn.first.click()
             
-            logger.info("Waiting for execution results (this might take a few seconds)...")
+            logger.info("Waiting for execution results (up to 60 seconds)...")
             
-            # We must wait until the result text appears and isn't 'Pending' or 'Judging'
+            # Wait for any result keyword to appear anywhere on the page
+            # This is much more robust than relying on a single selector
             self.page.wait_for_function("""
                 () => {
-                    const el = document.querySelector("[data-e2e-locator='console-result']");
-                    return el && el.innerText.trim().length > 0 && !el.innerText.includes("Pending") && !el.innerText.includes("Judging");
+                    const body = document.body.innerText;
+                    return body.includes('Accepted') ||
+                           body.includes('Wrong Answer') ||
+                           body.includes('Compile Error') ||
+                           body.includes('Runtime Error') ||
+                           body.includes('Time Limit Exceeded') ||
+                           body.includes('Memory Limit Exceeded') ||
+                           body.includes('Output') ||
+                           body.includes('Expected');
                 }
-            """, timeout=30000)
+            """, timeout=60000)
             
-            result_locator = self.page.locator("[data-e2e-locator='console-result']")
-            status_text = result_locator.text_content().strip()
+            # Now extract the result - try multiple selectors
+            status_text = ""
+            
+            # Try the official data-e2e locator first
+            result_el = self.page.locator("[data-e2e-locator='console-result']")
+            if result_el.count() > 0:
+                status_text = result_el.first.text_content().strip()
+            
+            # Fallback: scan page for known result strings
+            if not status_text:
+                page_text = self.page.evaluate("() => document.body.innerText")
+                for keyword in ["Accepted", "Wrong Answer", "Compile Error", "Runtime Error", "Time Limit Exceeded", "Memory Limit Exceeded"]:
+                    if keyword in page_text:
+                        status_text = keyword
+                        break
+            
+            if not status_text:
+                status_text = "Unknown Result"
+                
             logger.info(f"Test Result Status: {status_text}")
             
-            # Extract details (like stdout, errors, expected vs actual)
-            # The general container usually holds the diff and compilation errors
-            details_text = self.page.locator("div.font-menlo").text_content() if self.page.locator("div.font-menlo").count() > 0 else ""
+            # Extract error details for the AI debugger
+            details_text = ""
+            try:
+                details_text = self.page.evaluate("""
+                    () => {
+                        const els = document.querySelectorAll('.font-menlo, [class*="console-"], [class*="result-"]');
+                        return Array.from(els).map(e => e.innerText).join('\\n');
+                    }
+                """)
+            except:
+                pass
             
             return {
                 "status": status_text,
