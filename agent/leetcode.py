@@ -65,19 +65,19 @@ class LeetCode:
                     "input[autocomplete='username'], input[autocomplete='email']"
                 ).first
                 email_input.wait_for(state="visible", timeout=15000)
-                email_input.fill(username)
+                email_input.click()
+                email_input.press_sequentially(username, delay=50)
                 self.page.wait_for_timeout(500)
 
-                # Fill password
+                # Fill password sequentially to trigger React events
                 password_input = self.page.locator("input[type='password']").first
-                password_input.fill(password)
+                password_input.click()
+                password_input.press_sequentially(password, delay=50)
                 self.page.wait_for_timeout(500)
 
-                # Click submit
-                submit_btn = self.page.locator(
-                    "button[type='submit'], button:has-text('Sign in'), button:has-text('Log in')"
-                ).first
-                submit_btn.click()
+                # Press Enter instead of clicking the button (bypasses disabled state)
+                password_input.press("Enter")
+                logger.info("Pressed Enter to submit login form")
 
                 # Wait for redirect (login disappears)
                 self.page.wait_for_timeout(5000)
