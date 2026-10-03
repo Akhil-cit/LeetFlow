@@ -26,37 +26,53 @@ class LeetCode:
             except Exception as e:
                 logger.warning(f"Cookie auth failed: {e}. Falling back to credentials...")
 
-        # Strategy 2: Use Playwright to fill the browser login form
+        # Strategy 2: Use Playwright to fill the browser login form via homepage modal
         if username and password:
             try:
                 logger.info("Attempting browser-based credential login...")
-                self.page.goto("https://leetcode.com/accounts/login/", timeout=60000)
+                
+                # Go to homepage (avoids Cloudflare on the login page directly)
+                self.page.goto("https://leetcode.com/", timeout=60000)
                 self.page.wait_for_load_state("domcontentloaded")
                 self.page.wait_for_timeout(2000)
 
-                # Fill in login form
-                email_input = self.page.locator("input#id_login, input[name='login'], input[type='text']").first
-                password_input = self.page.locator("input#id_password, input[name='password'], input[type='password']").first
+                # Click "Sign In" button on the navbar
+                sign_in_link = self.page.locator("a[href*='login'], button:has-text('Sign in'), a:has-text('Sign in')")
+                if sign_in_link.count() > 0:
+                    sign_in_link.first.click()
+                    self.page.wait_for_timeout(2000)
 
+                # Try filling the email/username field with multiple selectors
+                email_input = self.page.locator(
+                    "input[name='email'], input[name='login'], input[type='email'], "
+                    "input[placeholder*='Email' i], input[placeholder*='email' i], "
+                    "input[autocomplete='username'], input[autocomplete='email']"
+                ).first
+                email_input.wait_for(timeout=15000)
                 email_input.fill(username)
                 self.page.wait_for_timeout(500)
+
+                # Fill password
+                password_input = self.page.locator("input[type='password']").first
                 password_input.fill(password)
                 self.page.wait_for_timeout(500)
 
-                # Click the sign in button
-                sign_in_btn = self.page.locator("button[type='submit'], button:has-text('Sign in'), button:has-text('Sign In')").first
-                sign_in_btn.click()
+                # Click submit
+                submit_btn = self.page.locator(
+                    "button[type='submit'], button:has-text('Sign in'), button:has-text('Log in')"
+                ).first
+                submit_btn.click()
 
-                # Wait for redirect away from login page (up to 15 seconds)
-                self.page.wait_for_url(lambda url: "login" not in url, timeout=15000)
+                # Wait for redirect (login disappears)
+                self.page.wait_for_timeout(5000)
                 self.page.wait_for_load_state("domcontentloaded")
 
-                # Confirm we're logged in
+                # Confirm logged in
                 if self.page.locator("a[href='/accounts/login/']").count() == 0:
                     logger.info("Browser credential login successful!")
                     return True
                 else:
-                    logger.error("Credential login failed — still on login page after submit.")
+                    logger.error("Credential login failed — still seeing Sign In after submit.")
                     return False
             except Exception as e:
                 logger.error(f"Browser credential login failed: {e}")
