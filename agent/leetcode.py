@@ -89,23 +89,42 @@ class LeetCode:
 
     def insert_code(self, code):
         logger.info("Inserting generated C++ code into the LeetCode editor...")
-        
+
+        # Strategy 1: Direct Monaco JavaScript API (bypasses DOM entirely)
         try:
-            # Focus the Monaco Editor
+            escaped_code = code.replace('\\', '\\\\').replace('`', '\\`').replace('${', '\\${')
+            result = self.page.evaluate(f"""
+                () => {{
+                    try {{
+                        const editors = monaco.editor.getEditors();
+                        if (editors && editors.length > 0) {{
+                            editors[0].setValue(`{escaped_code}`);
+                            return 'success';
+                        }}
+                        return 'no_editors';
+                    }} catch(e) {{
+                        return 'error:' + e.message;
+                    }}
+                }}
+            """)
+            logger.info(f"Monaco API result: {result}")
+            if result == 'success':
+                logger.info("Code inserted successfully via Monaco API.")
+                return True
+            logger.warning(f"Monaco API returned: {result}. Trying DOM fallback...")
+        except Exception as e:
+            logger.warning(f"Monaco API failed: {e}. Trying DOM fallback...")
+
+        # Strategy 2: DOM fallback — click editor and keyboard type
+        try:
             editor_selector = ".view-lines"
-            # Wait up to 30s for the Monaco editor to fully mount
+            logger.info("Waiting for Monaco editor DOM element (up to 30s)...")
             self.page.wait_for_selector(editor_selector, timeout=30000)
             self.page.click(editor_selector)
-            
-            # Select all existing code and delete it
             self.page.keyboard.press("Control+A")
-            self.page.keyboard.press("Meta+A") # For Mac compatibility if ever run on mac runner
             self.page.keyboard.press("Backspace")
-            
-            # Paste the generated code
             self.page.keyboard.insert_text(code)
-            
-            logger.info("Code inserted successfully.")
+            logger.info("Code inserted successfully via DOM fallback.")
             return True
         except Exception as e:
             logger.error(f"Failed to insert code: {e}")
