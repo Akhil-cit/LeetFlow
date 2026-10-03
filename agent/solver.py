@@ -80,3 +80,65 @@ CRITICAL INSTRUCTIONS:
         except Exception as e:
             logger.error(f"AI API call failed: {e}")
             return None
+
+    def debug(self, problem, wrong_code, error_details, attempt):
+        logger.info(f"Asking AI to debug code (Attempt {attempt})...")
+        if not self.client:
+            return None
+
+        prompt = f"""
+You are an expert C++ competitive programmer.
+You previously wrote a solution for the following LeetCode problem, but it failed when tested.
+
+Title: {problem['title']}
+Description: {problem['description_html']}
+
+### Your Previous Code:
+```cpp
+{wrong_code}
+```
+
+### The Error / Test Failure:
+{error_details}
+
+Please analyze the error and provide a corrected C++ solution.
+
+You MUST provide your response in the following exact format:
+
+### Bug Analysis
+(Explain why it failed and how to fix it)
+
+### Final C++ Solution
+```cpp
+{problem['cpp_signature']}
+    // your corrected code here
+}}
+```
+
+CRITICAL INSTRUCTIONS:
+- You must use the exact provided C++ function signature.
+- The C++ code block must be cleanly extractable.
+"""
+        try:
+            response = self.client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=prompt,
+            )
+            
+            raw_response = response.text
+            logger.info("Debugged solution generated successfully.")
+            
+            code_match = re.search(r'```cpp\n(.*?)\n```', raw_response, re.DOTALL)
+            if code_match:
+                final_code = code_match.group(1).strip()
+            else:
+                logger.error("Failed to extract C++ code from debug response.")
+                final_code = None
+                
+            return {
+                "raw_response": raw_response,
+                "code": final_code
+            }
+        except Exception as e:
+            logger.error(f"AI API call failed during debug: {e}")
+            return None

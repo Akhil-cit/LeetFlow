@@ -43,18 +43,41 @@ def main():
         # Wait for the complex React app and editor to load
         page.wait_for_load_state("networkidle", timeout=30000)
         
-        # Phase 8: Insert the AI-generated code
-        success = lc.insert_code(solution['code'])
-        if not success:
-            logger.error("Failed to insert code into editor. Halting.")
-            return
+        # Phase 10: AI Debugging Loop
+        MAX_ATTEMPTS = 3
+        attempt = 1
+        
+        while attempt <= MAX_ATTEMPTS:
+            logger.info(f"--- Attempt {attempt} of {MAX_ATTEMPTS} ---")
             
-        logger.info("Phase 8: AI solution successfully pasted into the LeetCode editor.")
-        
-        # Phase 9: Run code and read result
-        result = lc.test_solution()
-        logger.info(f"Phase 9: Code executed. Final Status: {result['status']}")
-        
+            # Phase 8: Insert the AI-generated code
+            success = lc.insert_code(solution['code'])
+            if not success:
+                logger.error("Failed to insert code into editor. Halting.")
+                return
+                
+            # Phase 9: Run code and read result
+            result = lc.test_solution()
+            logger.info(f"Code executed. Final Status: {result['status']}")
+            
+            if "Accepted" in result['status']:
+                logger.info("Solution was accepted by tests!")
+                break
+            else:
+                if attempt == MAX_ATTEMPTS:
+                    logger.error("Max attempts reached. Failed to solve the problem.")
+                    break
+                    
+                logger.info(f"Code failed with status: {result['status']}. Requesting debug from AI...")
+                solution = solver.debug(problem, solution['code'], result['details'], attempt)
+                
+                if not solution or not solution['code']:
+                    logger.error("AI failed to provide a debugged solution. Halting.")
+                    break
+                    
+                attempt += 1
+                
+    logger.info("Phase 10: AI debugging loop completed.")
     logger.info("Agent completed")
 
 if __name__ == "__main__":
