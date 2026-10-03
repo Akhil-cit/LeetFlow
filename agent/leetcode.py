@@ -52,19 +52,19 @@ class LeetCode:
                 self.page.wait_for_load_state("domcontentloaded")
                 self.page.wait_for_timeout(2000)
 
-                # Click "Sign In" button on the navbar
+                # Click "Sign In" button on the navbar (using JS to bypass visibility blocks)
                 sign_in_link = self.page.locator("a[href*='login'], button:has-text('Sign in'), a:has-text('Sign in')")
                 if sign_in_link.count() > 0:
-                    sign_in_link.first.click()
-                    self.page.wait_for_timeout(2000)
+                    sign_in_link.first.evaluate("node => node.click()")
+                    self.page.wait_for_timeout(3000)
 
-                # Try filling the email/username field with multiple selectors
+                # Try filling the email/username field
                 email_input = self.page.locator(
-                    "input[name='email'], input[name='login'], input[type='email'], "
+                    "input[name='email'], input[name='login'], input[id='id_login'], "
                     "input[placeholder*='Email' i], input[placeholder*='email' i], "
                     "input[autocomplete='username'], input[autocomplete='email']"
                 ).first
-                email_input.wait_for(timeout=15000)
+                email_input.wait_for(state="visible", timeout=15000)
                 email_input.fill(username)
                 self.page.wait_for_timeout(500)
 
@@ -92,6 +92,11 @@ class LeetCode:
                     return False
             except Exception as e:
                 logger.error(f"Browser credential login failed: {e}")
+                try:
+                    self.page.screenshot(path="login_timeout_debug.png")
+                    logger.info("Saved debug screenshot to login_timeout_debug.png")
+                except:
+                    pass
                 return False
 
         logger.error("No valid authentication method available (no session cookie and no credentials).")
