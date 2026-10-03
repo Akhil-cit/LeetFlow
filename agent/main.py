@@ -3,6 +3,7 @@ from agent.config import config
 from agent.browser import BrowserContext
 from agent.leetcode import LeetCode
 from agent.problem_parser import ProblemParser
+from agent.solver import AISolver
 
 def main():
     logger.info("Agent started")
@@ -15,7 +16,16 @@ def main():
         return
         
     logger.info(f"Daily Challenge: {problem['title']}")
-    logger.info(f"C++ Signature:\n{problem['cpp_signature']}")
+    
+    # Phase 7: AI Problem Solving
+    solver = AISolver()
+    solution = solver.solve(problem)
+    
+    if not solution or not solution['code']:
+        logger.error("Failed to generate a valid solution. Halting.")
+        return
+        
+    logger.info(f"Generated Code snippet (first 100 chars): {solution['code'][:100]}...")
     
     with BrowserContext() as page:
         lc = LeetCode(page)
