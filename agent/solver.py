@@ -13,8 +13,8 @@ class AISolver:
             # We use Groq because it has a generous free tier and blazing fast inference
             self.client = Groq(api_key=self.api_key)
         
-        # llama-3.3-70b is excellent at coding and available on Groq's free tier
-        self.model = "llama-3.3-70b-versatile"
+        # Use the newest available Llama model on Groq's free tier
+        self.model = "meta-llama/llama-4-scout-17b-16e-instruct"
 
     def solve(self, problem):
         logger.info("Sending problem to AI solver...")
