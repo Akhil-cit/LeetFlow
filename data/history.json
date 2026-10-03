@@ -1,1 +1,10 @@
-[]
+[
+    {
+        "date": "2026-10-03",
+        "timestamp": "2026-10-03T08:04:05.280075",
+        "id": "32",
+        "title": "Longest Valid Parentheses",
+        "attempts": 3,
+        "result": "Execution Timeout/Error"
+    }
+]
