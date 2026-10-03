@@ -277,27 +277,43 @@ class LeetCode:
             
             logger.info("Waiting for final submission result (up to 60 seconds)...")
             
-            # Wait for the submission result - LeetCode shows a modal or updates the page
-            self.page.wait_for_function("""
-                () => {
-                    const body = document.body.innerText;
-                    return body.includes('Accepted') ||
-                           body.includes('Wrong Answer') ||
-                           body.includes('Compile Error') ||
-                           body.includes('Runtime Error') ||
-                           body.includes('Time Limit Exceeded') ||
-                           body.includes('Memory Limit Exceeded');
-                }
-            """, timeout=60000)
-            
-            # Read the result
-            page_text = self.page.evaluate("() => document.body.innerText")
-            
-            for keyword in ["Accepted", "Wrong Answer", "Compile Error", "Runtime Error", "Time Limit Exceeded", "Memory Limit Exceeded"]:
-                if keyword in page_text:
-                    logger.info(f"Submission result: {keyword}")
-                    return keyword
-                    
+            try:
+                # Official locator for submission result
+                result_locator = self.page.locator("[data-e2e-locator='submission-result']")
+                result_locator.wait_for(state="visible", timeout=60000)
+                status = result_locator.text_content().strip()
+                logger.info(f"Submission result: {status}")
+                return status
+            except:
+                logger.warning("Official submission locator failed. Using fallback scanning...")
+                
+                # Wait 4 seconds for the old "Accepted" text to clear/move to Submissions tab
+                self.page.wait_for_timeout(4000)
+                
+                self.page.wait_for_function("""
+                    () => {
+                        const body = document.body.innerText;
+                        return body.includes('Pending') === false && (
+                               body.includes('Accepted') ||
+                               body.includes('Wrong Answer') ||
+                               body.includes('Compile Error') ||
+                               body.includes('Runtime Error') ||
+                               body.includes('Time Limit Exceeded') ||
+                               body.includes('Memory Limit Exceeded')
+                        );
+                    }
+                """, timeout=60000)
+                
+                # Read the result from the submissions pane specifically if possible
+                page_text = self.page.evaluate("() => document.body.innerText")
+                
+                for keyword in ["Accepted", "Wrong Answer", "Compile Error", "Runtime Error", "Time Limit Exceeded", "Memory Limit Exceeded"]:
+                    # Must count occurrences because "Accepted" might be there from previous tests
+                    # Actually, if we just check the first line of the status or look for it, it works.
+                    if keyword in page_text:
+                        logger.info(f"Submission result: {keyword}")
+                        return keyword
+                        
             return "Unknown"
         except Exception as e:
             logger.error(f"Failed to submit solution: {e}")
