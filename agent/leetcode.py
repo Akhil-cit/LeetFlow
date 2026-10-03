@@ -5,32 +5,37 @@ class LeetCode:
         self.page = page
         self.base_url = "https://leetcode.com"
 
-    def login(self, username, password):
-        logger.info("Attempting secure login...")
-        if not username or not password:
-            logger.error("Missing LeetCode credentials in secrets!")
+    def login(self, session_cookie):
+        logger.info("Attempting login via Session Cookie...")
+        if not session_cookie:
+            logger.error("Missing LEETCODE_SESSION cookie in secrets!")
             return False
 
-        self.page.goto(self.base_url + "/accounts/login/", timeout=60000)
-        
         try:
-            # Wait for the login fields
-            self.page.wait_for_selector("#id_login", timeout=15000)
+            # Set the session cookie directly in the browser context
+            self.page.context.add_cookies([
+                {
+                    "name": "LEETCODE_SESSION",
+                    "value": session_cookie,
+                    "domain": ".leetcode.com",
+                    "path": "/"
+                }
+            ])
             
-            # Fill the credentials securely (Playwright doesn't print these to logs)
-            self.page.fill("#id_login", username)
-            self.page.fill("#id_password", password)
+            # Go to homepage to verify
+            self.page.goto(self.base_url, timeout=60000)
+            self.page.wait_for_load_state("domcontentloaded")
             
-            # Click sign in
-            self.page.click("button#signin_btn")
-            
-            # Wait for the page to navigate indicating a successful login
-            # We wait for the navbar profile icon or a general post-login selector
-            self.page.wait_for_load_state("networkidle", timeout=15000)
-            logger.info("Authentication successful!")
+            # Check if we are actually logged in by looking for the premium/profile navbar
+            # If the sign-in button is still there, the cookie is invalid or expired
+            if self.page.locator("a[href='/accounts/login/']").count() > 0:
+                logger.error("Session cookie is invalid or expired! Still seeing Sign In button.")
+                return False
+                
+            logger.info("Cookie Authentication successful!")
             return True
         except Exception as e:
-            logger.error(f"Authentication failed (Possibly Cloudflare block or wrong credentials).")
+            logger.error(f"Authentication failed: {e}")
             return False
 
     def goto_home(self):
