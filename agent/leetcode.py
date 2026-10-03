@@ -131,19 +131,42 @@ class LeetCode:
         except Exception as e:
             logger.warning(f"Monaco API failed: {e}. Trying DOM fallback...")
 
-        # Strategy 2: DOM fallback — click editor and keyboard type
+        # Strategy 2: DOM fallback — target Monaco's hidden textarea
         try:
-            editor_selector = ".view-lines"
-            logger.info("Waiting for Monaco editor DOM element (up to 30s)...")
-            self.page.wait_for_selector(editor_selector, timeout=30000)
-            self.page.click(editor_selector)
+            logger.info("Waiting for Monaco editor DOM element...")
+            
+            # The new LeetCode UI might load the editor lazily.
+            # We look for the main monaco-editor container or its internal textarea
+            editor_locator = self.page.locator(".monaco-editor").first
+            editor_locator.wait_for(state="visible", timeout=30000)
+            
+            # Click inside the editor to focus it
+            editor_locator.click()
+            self.page.wait_for_timeout(500)
+            
+            # Try to focus the actual hidden textarea Monaco uses for input
+            textarea = self.page.locator(".monaco-editor textarea").first
+            if textarea.count() > 0:
+                textarea.focus()
+            
+            # Select all existing code and delete it
             self.page.keyboard.press("Control+A")
+            self.page.keyboard.press("Meta+A") # Mac fallback
             self.page.keyboard.press("Backspace")
+            self.page.wait_for_timeout(500)
+            
+            # Insert the new code
             self.page.keyboard.insert_text(code)
+            
             logger.info("Code inserted successfully via DOM fallback.")
             return True
         except Exception as e:
             logger.error(f"Failed to insert code: {e}")
+            try:
+                self.page.screenshot(path="editor_timeout_debug.png")
+                logger.info("Saved debug screenshot to editor_timeout_debug.png")
+            except:
+                pass
             return False
 
     def set_language_cpp(self):
