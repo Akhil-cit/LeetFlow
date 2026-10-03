@@ -5,12 +5,14 @@ from agent.leetcode import LeetCode
 from agent.problem_parser import ProblemParser
 from agent.solver import AISolver
 from agent.storage import Storage
+from agent.notifier import Notifier
 
 def main():
     logger.info("Agent started")
     logger.info(f"Running with AUTO_SUBMIT={config.AUTO_SUBMIT}")
     
     storage = Storage()
+    notifier = Notifier()
     
     # Phase 6: Extract Problem
     problem = ProblemParser.get_daily_challenge()
@@ -70,12 +72,22 @@ def main():
             
             if "Accepted" in result['status']:
                 logger.info("Solution was accepted by tests!")
+                
+                # Phase 13: Submission Control
+                if config.AUTO_SUBMIT:
+                    logger.info("AUTO_SUBMIT is enabled. Proceeding to submit...")
+                    lc.submit_solution()
+                else:
+                    logger.info("AUTO_SUBMIT is disabled. Skipping final submission to comply with API limits/TOS.")
+                    
                 storage.log_result(problem, attempt, result['status'])
+                notifier.send_notification(problem, attempt, result['status'])
                 break
             else:
                 if attempt == MAX_ATTEMPTS:
                     logger.error("Max attempts reached. Failed to solve the problem.")
                     storage.log_result(problem, attempt, result['status'])
+                    notifier.send_notification(problem, attempt, result['status'])
                     break
                     
                 logger.info(f"Code failed with status: {result['status']}. Requesting debug from AI...")
@@ -84,6 +96,7 @@ def main():
                 if not solution or not solution['code']:
                     logger.error("AI failed to provide a debugged solution. Halting.")
                     storage.log_result(problem, attempt, "Debug Generation Failed")
+                    notifier.send_notification(problem, attempt, "Debug Generation Failed")
                     break
                     
                 attempt += 1

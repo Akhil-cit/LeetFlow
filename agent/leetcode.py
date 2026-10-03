@@ -98,3 +98,22 @@ class LeetCode:
         except Exception as e:
             logger.error(f"Failed to run code or read result: {e}")
             return {"status": "Execution Timeout/Error", "details": str(e)}
+
+    def submit_solution(self):
+        logger.info("Clicking the 'Submit' button for final submission...")
+        try:
+            submit_btn = self.page.locator("button[data-e2e-locator='console-submit-button']")
+            if submit_btn.count() == 0:
+                submit_btn = self.page.locator("button:has-text('Submit')").first
+                
+            submit_btn.click()
+            
+            # Wait for submission to process
+            logger.info("Waiting 10 seconds for submission to register on LeetCode servers...")
+            self.page.wait_for_timeout(10000)
+            
+            logger.info("Submission complete.")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to submit solution: {e}")
+            return False
