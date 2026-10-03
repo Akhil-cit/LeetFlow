@@ -31,7 +31,8 @@ class Storage:
         
         for record in history:
             if record.get('date') == today and record.get('id') == problem_id:
-                if "Accepted" in record.get('result', ''):
+                # Only skip if fully submitted and accepted (not just sample tests)
+                if "Submitted: Accepted" in record.get('result', ''):
                     return True
         return False
 
