@@ -77,7 +77,8 @@ class LeetCode:
         try:
             # Focus the Monaco Editor
             editor_selector = ".view-lines"
-            self.page.wait_for_selector(editor_selector, timeout=15000)
+            # Wait up to 30s for the Monaco editor to fully mount
+            self.page.wait_for_selector(editor_selector, timeout=30000)
             self.page.click(editor_selector)
             
             # Select all existing code and delete it
@@ -97,23 +98,27 @@ class LeetCode:
     def set_language_cpp(self):
         """Ensure C++ is selected as the language."""
         try:
-            # Look for language selector button
-            lang_btn = self.page.locator("button.rounded.items-center:has-text('C++')")
-            if lang_btn.count() > 0:
+            # If any button already says C++, we're done
+            if self.page.locator("button:has-text('C++')").count() > 0:
                 logger.info("C++ already selected.")
                 return
             
-            # Try clicking the language dropdown
+            # Click the language dropdown (try different selectors)
             dropdown = self.page.locator("[data-e2e-locator='code-lang-button']")
             if dropdown.count() == 0:
-                dropdown = self.page.locator("button.rounded").filter(has_text=lambda t: any(lang in t for lang in ['Python', 'Java', 'C', 'Go', 'Rust']))
+                # Look for any language name button (Python3, Java, etc.)
+                for lang in ['Python3', 'Python', 'Java', 'Go', 'Rust', 'C#']:
+                    dropdown = self.page.locator(f"button:has-text('{lang}')")
+                    if dropdown.count() > 0:
+                        break
+
             if dropdown.count() > 0:
                 dropdown.first.click()
-                self.page.wait_for_timeout(500)
+                self.page.wait_for_timeout(800)
                 cpp_option = self.page.locator("div[role='option']:has-text('C++'), li:has-text('C++')")
                 if cpp_option.count() > 0:
                     cpp_option.first.click()
-                    self.page.wait_for_timeout(500)
+                    self.page.wait_for_timeout(800)
                     logger.info("Switched to C++.")
         except Exception as e:
             logger.info(f"Language switch skipped: {e}")
