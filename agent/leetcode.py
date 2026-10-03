@@ -19,10 +19,26 @@ class LeetCode:
                 }])
                 self.page.goto(self.base_url, timeout=60000)
                 self.page.wait_for_load_state("domcontentloaded")
-                if self.page.locator("a[href='/accounts/login/']").count() == 0:
-                    logger.info("Cookie Authentication successful!")
+                self.page.wait_for_timeout(2000)
+                
+                # Confirm login by calling LeetCode's GraphQL "whoami" endpoint
+                # This is the most reliable check - it returns the username if logged in
+                whoami = self.page.evaluate("""
+                    async () => {
+                        const res = await fetch('https://leetcode.com/graphql', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({query: '{ userStatus { username isSignedIn } }'})
+                        });
+                        const data = await res.json();
+                        return data?.data?.userStatus;
+                    }
+                """)
+                logger.info(f"Auth check result: {whoami}")
+                if whoami and whoami.get('isSignedIn'):
+                    logger.info(f"Cookie Authentication successful! Logged in as: {whoami.get('username')}")
                     return True
-                logger.warning("Session cookie expired or invalid. Falling back to credentials...")
+                logger.warning("Session cookie is invalid or expired (not signed in). Falling back to credentials...")
             except Exception as e:
                 logger.warning(f"Cookie auth failed: {e}. Falling back to credentials...")
 
