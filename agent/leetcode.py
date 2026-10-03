@@ -169,12 +169,30 @@ class LeetCode:
                 
             submit_btn.click()
             
-            # Wait for submission to process
-            logger.info("Waiting 10 seconds for submission to register on LeetCode servers...")
-            self.page.wait_for_timeout(10000)
+            logger.info("Waiting for final submission result (up to 60 seconds)...")
             
-            logger.info("Submission complete.")
-            return True
+            # Wait for the submission result - LeetCode shows a modal or updates the page
+            self.page.wait_for_function("""
+                () => {
+                    const body = document.body.innerText;
+                    return body.includes('Accepted') ||
+                           body.includes('Wrong Answer') ||
+                           body.includes('Compile Error') ||
+                           body.includes('Runtime Error') ||
+                           body.includes('Time Limit Exceeded') ||
+                           body.includes('Memory Limit Exceeded');
+                }
+            """, timeout=60000)
+            
+            # Read the result
+            page_text = self.page.evaluate("() => document.body.innerText")
+            
+            for keyword in ["Accepted", "Wrong Answer", "Compile Error", "Runtime Error", "Time Limit Exceeded", "Memory Limit Exceeded"]:
+                if keyword in page_text:
+                    logger.info(f"Submission result: {keyword}")
+                    return keyword
+                    
+            return "Unknown"
         except Exception as e:
             logger.error(f"Failed to submit solution: {e}")
-            return False
+            return "Submission Error"

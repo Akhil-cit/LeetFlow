@@ -75,18 +75,37 @@ def main():
             logger.info(f"Code executed. Final Status: {result['status']}")
             
             if "Accepted" in result['status']:
-                logger.info("Solution was accepted by tests!")
+                logger.info("Sample tests passed!")
                 
                 # Phase 13: Submission Control
                 if config.AUTO_SUBMIT:
-                    logger.info("AUTO_SUBMIT is enabled. Proceeding to submit...")
-                    lc.submit_solution()
-                else:
-                    logger.info("AUTO_SUBMIT is disabled. Skipping final submission to comply with API limits/TOS.")
+                    logger.info("AUTO_SUBMIT is enabled. Proceeding to submit against all hidden tests...")
+                    submit_result = lc.submit_solution()
                     
-                storage.log_result(problem, attempt, result['status'])
-                notifier.send_notification(problem, attempt, result['status'])
-                break
+                    if "Accepted" in submit_result:
+                        logger.info("🎉 Full submission ACCEPTED! Problem solved!")
+                        storage.log_result(problem, attempt, "Submitted: Accepted")
+                        notifier.send_notification(problem, attempt, "Submitted: Accepted")
+                        break
+                    else:
+                        logger.warning(f"Submission failed with: {submit_result}. AI will retry...")
+                        if attempt == MAX_ATTEMPTS:
+                            logger.error("Max attempts reached. Submission failed.")
+                            storage.log_result(problem, attempt, f"Submitted: {submit_result}")
+                            notifier.send_notification(problem, attempt, f"Submitted: {submit_result}")
+                            break
+                        solution = solver.debug(problem, solution['code'], f"Submission failed: {submit_result}", attempt)
+                        if not solution or not solution['code']:
+                            logger.error("AI failed to provide a debugged solution. Halting.")
+                            storage.log_result(problem, attempt, "Debug Generation Failed")
+                            notifier.send_notification(problem, attempt, "Debug Generation Failed")
+                            break
+                        attempt += 1
+                else:
+                    logger.info("AUTO_SUBMIT disabled. Skipping final submission.")
+                    storage.log_result(problem, attempt, result['status'])
+                    notifier.send_notification(problem, attempt, result['status'])
+                    break
             else:
                 if attempt == MAX_ATTEMPTS:
                     logger.error("Max attempts reached. Failed to solve the problem.")
