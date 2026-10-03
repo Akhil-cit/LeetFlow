@@ -1,5 +1,5 @@
 import re
-from google import genai
+from groq import Groq
 from agent.logger import logger
 from agent.config import config
 
@@ -10,8 +10,11 @@ class AISolver:
             logger.error("AI_API_KEY is missing in secrets!")
             self.client = None
         else:
-            # We use Google's Gemini API because it has a very generous free tier.
-            self.client = genai.Client(api_key=self.api_key)
+            # We use Groq because it has a generous free tier and blazing fast inference
+            self.client = Groq(api_key=self.api_key)
+        
+        # llama-3.3-70b is excellent at coding and available on Groq's free tier
+        self.model = "llama-3.3-70b-versatile"
 
     def solve(self, problem):
         logger.info("Sending problem to AI solver...")
@@ -54,13 +57,14 @@ CRITICAL INSTRUCTIONS:
 """
         
         try:
-            # We use gemini-2.5-flash as it is fast, highly capable in coding, and in the free tier
-            response = self.client.models.generate_content(
-                model='gemini-3.8-flash',
-                contents=prompt,
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.1,
+                max_tokens=4096,
             )
             
-            raw_response = response.text
+            raw_response = response.choices[0].message.content
             logger.info("Solution generated successfully.")
             
             # Extract just the code from the markdown block
@@ -120,12 +124,14 @@ CRITICAL INSTRUCTIONS:
 - The C++ code block must be cleanly extractable.
 """
         try:
-            response = self.client.models.generate_content(
-                model='gemini-3.8-flash',
-                contents=prompt,
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.1,
+                max_tokens=4096,
             )
             
-            raw_response = response.text
+            raw_response = response.choices[0].message.content
             logger.info("Debugged solution generated successfully.")
             
             code_match = re.search(r'```cpp\n(.*?)\n```', raw_response, re.DOTALL)
