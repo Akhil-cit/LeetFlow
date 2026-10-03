@@ -26,50 +26,40 @@ class LeetCode:
             except Exception as e:
                 logger.warning(f"Cookie auth failed: {e}. Falling back to credentials...")
 
-        # Strategy 2: Use LeetCode GraphQL sign-in API directly (no Cloudflare page)
+        # Strategy 2: Use Playwright to fill the browser login form
         if username and password:
             try:
-                import requests as req
-                
-                # First get a CSRF token from the login page
-                client = req.Session()
-                client.get("https://leetcode.com/accounts/login/", headers={"User-Agent": "Mozilla/5.0"})
-                csrf = client.cookies.get("csrftoken", "")
-                
-                # POST credentials
-                resp = client.post(
-                    "https://leetcode.com/accounts/login/",
-                    data={
-                        "login": username,
-                        "password": password,
-                        "csrfmiddlewaretoken": csrf,
-                    },
-                    headers={
-                        "Referer": "https://leetcode.com/accounts/login/",
-                        "User-Agent": "Mozilla/5.0",
-                        "X-CSRFToken": csrf
-                    },
-                    allow_redirects=True
-                )
-                
-                session_val = client.cookies.get("LEETCODE_SESSION")
-                new_csrf = client.cookies.get("csrftoken", "")
-                
-                if session_val:
-                    logger.info("Credential login successful! Injecting session into browser...")
-                    self.page.context.add_cookies([
-                        {"name": "LEETCODE_SESSION", "value": session_val, "domain": ".leetcode.com", "path": "/"},
-                        {"name": "csrftoken", "value": new_csrf, "domain": ".leetcode.com", "path": "/"}
-                    ])
-                    self.page.goto(self.base_url, timeout=60000)
-                    self.page.wait_for_load_state("domcontentloaded")
-                    logger.info("Browser authenticated successfully via credentials!")
+                logger.info("Attempting browser-based credential login...")
+                self.page.goto("https://leetcode.com/accounts/login/", timeout=60000)
+                self.page.wait_for_load_state("domcontentloaded")
+                self.page.wait_for_timeout(2000)
+
+                # Fill in login form
+                email_input = self.page.locator("input#id_login, input[name='login'], input[type='text']").first
+                password_input = self.page.locator("input#id_password, input[name='password'], input[type='password']").first
+
+                email_input.fill(username)
+                self.page.wait_for_timeout(500)
+                password_input.fill(password)
+                self.page.wait_for_timeout(500)
+
+                # Click the sign in button
+                sign_in_btn = self.page.locator("button[type='submit'], button:has-text('Sign in'), button:has-text('Sign In')").first
+                sign_in_btn.click()
+
+                # Wait for redirect away from login page (up to 15 seconds)
+                self.page.wait_for_url(lambda url: "login" not in url, timeout=15000)
+                self.page.wait_for_load_state("domcontentloaded")
+
+                # Confirm we're logged in
+                if self.page.locator("a[href='/accounts/login/']").count() == 0:
+                    logger.info("Browser credential login successful!")
                     return True
                 else:
-                    logger.error("Credential login failed — could not obtain session cookie from response.")
+                    logger.error("Credential login failed — still on login page after submit.")
                     return False
             except Exception as e:
-                logger.error(f"Credential authentication failed: {e}")
+                logger.error(f"Browser credential login failed: {e}")
                 return False
 
         logger.error("No valid authentication method available (no session cookie and no credentials).")
