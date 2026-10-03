@@ -49,7 +49,12 @@ def main():
             logger.error("Failed to insert code into editor. Halting.")
             return
             
-    logger.info("Phase 8: AI solution successfully pasted into the LeetCode editor!")
+        logger.info("Phase 8: AI solution successfully pasted into the LeetCode editor.")
+        
+        # Phase 9: Run code and read result
+        result = lc.test_solution()
+        logger.info(f"Phase 9: Code executed. Final Status: {result['status']}")
+        
     logger.info("Agent completed")
 
 if __name__ == "__main__":

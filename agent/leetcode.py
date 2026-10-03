@@ -44,7 +44,6 @@ class LeetCode:
         
         try:
             # Focus the Monaco Editor
-            # The editor usually contains the class 'view-lines'
             editor_selector = ".view-lines"
             self.page.wait_for_selector(editor_selector, timeout=15000)
             self.page.click(editor_selector)
@@ -55,7 +54,6 @@ class LeetCode:
             self.page.keyboard.press("Backspace")
             
             # Paste the generated code
-            # Playwright's insert_text is much faster and more reliable than type() for large blocks of code
             self.page.keyboard.insert_text(code)
             
             logger.info("Code inserted successfully.")
@@ -63,3 +61,40 @@ class LeetCode:
         except Exception as e:
             logger.error(f"Failed to insert code: {e}")
             return False
+
+    def test_solution(self):
+        logger.info("Clicking the 'Run' button to test the solution...")
+        
+        try:
+            # Click the Run button
+            run_btn = self.page.locator("button[data-e2e-locator='console-run-button']")
+            if run_btn.count() == 0:
+                run_btn = self.page.locator("button:has-text('Run')").first
+                
+            run_btn.click()
+            
+            logger.info("Waiting for execution results (this might take a few seconds)...")
+            
+            # We must wait until the result text appears and isn't 'Pending' or 'Judging'
+            self.page.wait_for_function("""
+                () => {
+                    const el = document.querySelector("[data-e2e-locator='console-result']");
+                    return el && el.innerText.trim().length > 0 && !el.innerText.includes("Pending") && !el.innerText.includes("Judging");
+                }
+            """, timeout=30000)
+            
+            result_locator = self.page.locator("[data-e2e-locator='console-result']")
+            status_text = result_locator.text_content().strip()
+            logger.info(f"Test Result Status: {status_text}")
+            
+            # Extract details (like stdout, errors, expected vs actual)
+            # The general container usually holds the diff and compilation errors
+            details_text = self.page.locator("div.font-menlo").text_content() if self.page.locator("div.font-menlo").count() > 0 else ""
+            
+            return {
+                "status": status_text,
+                "details": details_text
+            }
+        except Exception as e:
+            logger.error(f"Failed to run code or read result: {e}")
+            return {"status": "Execution Timeout/Error", "details": str(e)}
