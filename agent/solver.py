@@ -56,7 +56,7 @@ CRITICAL INSTRUCTIONS:
         try:
             # We use gemini-2.5-flash as it is fast, highly capable in coding, and in the free tier
             response = self.client.models.generate_content(
-                model='gemini-2.0-flash',
+                model='gemini-3.8-flash',
                 contents=prompt,
             )
             
@@ -121,7 +121,7 @@ CRITICAL INSTRUCTIONS:
 """
         try:
             response = self.client.models.generate_content(
-                model='gemini-2.0-flash',
+                model='gemini-3.8-flash',
                 contents=prompt,
             )
             
