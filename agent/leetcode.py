@@ -38,3 +38,28 @@ class LeetCode:
         self.page.goto(self.base_url, timeout=60000)
         self.page.wait_for_load_state("domcontentloaded")
         logger.info(f"Successfully loaded: {self.page.title()}")
+
+    def insert_code(self, code):
+        logger.info("Inserting generated C++ code into the LeetCode editor...")
+        
+        try:
+            # Focus the Monaco Editor
+            # The editor usually contains the class 'view-lines'
+            editor_selector = ".view-lines"
+            self.page.wait_for_selector(editor_selector, timeout=15000)
+            self.page.click(editor_selector)
+            
+            # Select all existing code and delete it
+            self.page.keyboard.press("Control+A")
+            self.page.keyboard.press("Meta+A") # For Mac compatibility if ever run on mac runner
+            self.page.keyboard.press("Backspace")
+            
+            # Paste the generated code
+            # Playwright's insert_text is much faster and more reliable than type() for large blocks of code
+            self.page.keyboard.insert_text(code)
+            
+            logger.info("Code inserted successfully.")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to insert code: {e}")
+            return False

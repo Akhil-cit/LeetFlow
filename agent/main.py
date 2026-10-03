@@ -39,9 +39,17 @@ def main():
         # Navigate directly to the extracted problem page
         logger.info(f"Navigating to problem page: {problem['link']}")
         page.goto(problem['link'], timeout=60000)
-        page.wait_for_load_state("domcontentloaded")
         
-    logger.info("Phase 6: Problem extracted and navigated to editor.")
+        # Wait for the complex React app and editor to load
+        page.wait_for_load_state("networkidle", timeout=30000)
+        
+        # Phase 8: Insert the AI-generated code
+        success = lc.insert_code(solution['code'])
+        if not success:
+            logger.error("Failed to insert code into editor. Halting.")
+            return
+            
+    logger.info("Phase 8: AI solution successfully pasted into the LeetCode editor!")
     logger.info("Agent completed")
 
 if __name__ == "__main__":
