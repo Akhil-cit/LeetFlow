@@ -4,10 +4,13 @@ from agent.browser import BrowserContext
 from agent.leetcode import LeetCode
 from agent.problem_parser import ProblemParser
 from agent.solver import AISolver
+from agent.storage import Storage
 
 def main():
     logger.info("Agent started")
     logger.info(f"Running with AUTO_SUBMIT={config.AUTO_SUBMIT}")
+    
+    storage = Storage()
     
     # Phase 6: Extract Problem
     problem = ProblemParser.get_daily_challenge()
@@ -16,6 +19,11 @@ def main():
         return
         
     logger.info(f"Daily Challenge: {problem['title']}")
+    
+    # Phase 11: Duplicate Protection
+    if storage.is_already_solved_today(problem['id']):
+        logger.info("This problem has already been successfully solved today! Exiting to save resources.")
+        return
     
     # Phase 7: AI Problem Solving
     solver = AISolver()
@@ -62,10 +70,12 @@ def main():
             
             if "Accepted" in result['status']:
                 logger.info("Solution was accepted by tests!")
+                storage.log_result(problem, attempt, result['status'])
                 break
             else:
                 if attempt == MAX_ATTEMPTS:
                     logger.error("Max attempts reached. Failed to solve the problem.")
+                    storage.log_result(problem, attempt, result['status'])
                     break
                     
                 logger.info(f"Code failed with status: {result['status']}. Requesting debug from AI...")
@@ -73,6 +83,7 @@ def main():
                 
                 if not solution or not solution['code']:
                     logger.error("AI failed to provide a debugged solution. Halting.")
+                    storage.log_result(problem, attempt, "Debug Generation Failed")
                     break
                     
                 attempt += 1

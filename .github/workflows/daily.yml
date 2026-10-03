@@ -10,6 +10,8 @@ on:
 jobs:
   run-agent:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     
     steps:
       - name: Checkout repository
@@ -37,3 +39,12 @@ jobs:
           HEADLESS: true
         run: |
           python -m agent.main
+
+      - name: Commit execution history
+        if: always()
+        run: |
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data/history.json || echo "No history file to add"
+          git commit -m "Update execution history" || echo "No changes to commit"
+          git push || echo "No changes to push"
