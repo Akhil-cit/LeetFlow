@@ -56,8 +56,11 @@ def main():
         page.goto(problem['link'], timeout=60000)
         
         # Wait for the React app to load - "domcontentloaded" is reliable
-        # "networkidle" never fires on LeetCode due to persistent WebSocket connections
         page.wait_for_load_state("domcontentloaded", timeout=30000)
+        
+        # Handle potential Cloudflare Turnstile intercept
+        lc._handle_cloudflare()
+        
         page.wait_for_timeout(5000)  # Extra buffer for the Monaco editor to mount
         
         # Phase 10: AI Debugging Loop

@@ -25,8 +25,7 @@ class BrowserContext:
                 channel="chrome",  # Uses the real system Google Chrome (better for Cloudflare)
                 ignore_default_args=["--enable-automation"],
                 args=["--start-maximized", "--disable-blink-features=AutomationControlled"],
-                viewport={'width': 1280, 'height': 720},
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                viewport={'width': 1280, 'height': 720}
             )
         except Exception as e:
             logger.warning(f"Failed to launch with channel='chrome': {e}. Falling back to default chromium.")
@@ -35,8 +34,7 @@ class BrowserContext:
                 headless=config.HEADLESS,
                 ignore_default_args=["--enable-automation"],
                 args=["--start-maximized", "--disable-blink-features=AutomationControlled"],
-                viewport={'width': 1280, 'height': 720},
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                viewport={'width': 1280, 'height': 720}
             )
         
         if len(self.context.pages) > 0:

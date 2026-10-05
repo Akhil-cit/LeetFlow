@@ -129,7 +129,21 @@ class LeetCode:
         logger.info("Navigating to LeetCode homepage...")
         self.page.goto(self.base_url, timeout=60000)
         self.page.wait_for_load_state("domcontentloaded")
+        self._handle_cloudflare()
         logger.info(f"Successfully loaded: {self.page.title()}")
+        
+    def _handle_cloudflare(self):
+        try:
+            # Check for Cloudflare Turnstile iframe
+            cf_iframe = self.page.frame_locator('iframe[src*="cloudflare"]').first
+            if cf_iframe:
+                checkbox = cf_iframe.locator('input[type="checkbox"]').first
+                if checkbox.count() > 0:
+                    logger.info("Cloudflare Turnstile detected! Attempting to click...")
+                    checkbox.click(timeout=5000)
+                    self.page.wait_for_timeout(3000)
+        except Exception as e:
+            pass
 
     def insert_code(self, code):
         logger.info("Inserting generated C++ code into the LeetCode editor...")
