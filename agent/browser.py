@@ -1,3 +1,4 @@
+import os
 from playwright.sync_api import sync_playwright
 from agent.logger import logger
 from agent.config import config
@@ -5,35 +6,47 @@ from agent.config import config
 class BrowserContext:
     def __init__(self):
         self.playwright = None
-        self.browser = None
         self.context = None
         self.page = None
 
     def __enter__(self):
-        logger.info("Initializing Playwright browser...")
+        logger.info("Initializing Playwright persistent browser...")
         self.playwright = sync_playwright().start()
         
-        # We use chromium as it is highly compatible with LeetCode
-        logger.info(f"Launching browser (Headless: {config.HEADLESS})")
-        self.browser = self.playwright.chromium.launch(
-            headless=config.HEADLESS,
-            args=["--start-maximized", "--disable-blink-features=AutomationControlled"]
-        )
+        user_data_dir = os.path.join(os.getcwd(), "data", "browser_profile")
+        os.makedirs(user_data_dir, exist_ok=True)
         
-        # Set a realistic user agent to avoid being blocked
-        self.context = self.browser.new_context(
-            viewport={'width': 1280, 'height': 720},
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        )
+        logger.info(f"Launching persistent browser (Headless: {config.HEADLESS})")
         
-        self.page = self.context.new_page()
+        try:
+            self.context = self.playwright.chromium.launch_persistent_context(
+                user_data_dir=user_data_dir,
+                headless=config.HEADLESS,
+                channel="chrome",  # Uses the real system Google Chrome (better for Cloudflare)
+                args=["--start-maximized", "--disable-blink-features=AutomationControlled"],
+                viewport={'width': 1280, 'height': 720},
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            )
+        except Exception as e:
+            logger.warning(f"Failed to launch with channel='chrome': {e}. Falling back to default chromium.")
+            self.context = self.playwright.chromium.launch_persistent_context(
+                user_data_dir=user_data_dir,
+                headless=config.HEADLESS,
+                args=["--start-maximized", "--disable-blink-features=AutomationControlled"],
+                viewport={'width': 1280, 'height': 720},
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            )
+        
+        if len(self.context.pages) > 0:
+            self.page = self.context.pages[0]
+        else:
+            self.page = self.context.new_page()
+            
         return self.page
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         logger.info("Closing browser...")
         if self.context:
             self.context.close()
-        if self.browser:
-            self.browser.close()
         if self.playwright:
             self.playwright.stop()

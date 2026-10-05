@@ -6,8 +6,8 @@ echo.
 
 set SCRIPT_DIR=%~dp0
 
-:: Create a scheduled task to run every day at 10:00 AM
-schtasks /create /f /tn "LeetCodeDaily" /tr "wscript.exe \"%SCRIPT_DIR%run_invisible.vbs\"" /sc daily /st 10:00
+:: Create a scheduled task to run automatically whenever you log into your computer
+schtasks /create /f /tn "LeetCodeDaily" /tr "wscript.exe \"%SCRIPT_DIR%run_invisible.vbs\"" /sc onlogon
 
 echo.
 echo Setup complete! The agent will now run invisibly in the background every day at 10:00 AM.

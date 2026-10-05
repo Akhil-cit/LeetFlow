@@ -6,10 +6,34 @@ class LeetCode:
         self.base_url = "https://leetcode.com"
 
     def login(self, session_cookie=None, username=None, password=None):
-        logger.info("Attempting authentication...")
+        logger.info("Checking if already authenticated in persistent profile...")
+        
+        try:
+            self.page.goto(self.base_url, timeout=60000)
+            self.page.wait_for_load_state("domcontentloaded")
+            self.page.wait_for_timeout(2000)
+            
+            whoami = self.page.evaluate("""
+                async () => {
+                    const res = await fetch('https://leetcode.com/graphql', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({query: '{ userStatus { username isSignedIn } }'})
+                    });
+                    const data = await res.json();
+                    return data?.data?.userStatus;
+                }
+            """)
+            logger.info(f"Auth check result: {whoami}")
+            if whoami and whoami.get('isSignedIn'):
+                logger.info(f"Already signed in via persistent profile as: {whoami.get('username')}!")
+                return True
+        except Exception as e:
+            logger.warning(f"Persistent auth check failed: {e}")
 
         # Strategy 1: If a session cookie is provided, try it first (fastest)
         if session_cookie:
+            logger.info("Persistent session invalid. Trying provided session cookie...")
             try:
                 self.page.context.add_cookies([{
                     "name": "LEETCODE_SESSION",
@@ -21,8 +45,7 @@ class LeetCode:
                 self.page.wait_for_load_state("domcontentloaded")
                 self.page.wait_for_timeout(2000)
                 
-                # Confirm login by calling LeetCode's GraphQL "whoami" endpoint
-                # This is the most reliable check - it returns the username if logged in
+                # Confirm login
                 whoami = self.page.evaluate("""
                     async () => {
                         const res = await fetch('https://leetcode.com/graphql', {
