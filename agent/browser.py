@@ -23,6 +23,7 @@ class BrowserContext:
                 user_data_dir=user_data_dir,
                 headless=config.HEADLESS,
                 channel="chrome",  # Uses the real system Google Chrome (better for Cloudflare)
+                ignore_default_args=["--enable-automation"],
                 args=["--start-maximized", "--disable-blink-features=AutomationControlled"],
                 viewport={'width': 1280, 'height': 720},
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -32,6 +33,7 @@ class BrowserContext:
             self.context = self.playwright.chromium.launch_persistent_context(
                 user_data_dir=user_data_dir,
                 headless=config.HEADLESS,
+                ignore_default_args=["--enable-automation"],
                 args=["--start-maximized", "--disable-blink-features=AutomationControlled"],
                 viewport={'width': 1280, 'height': 720},
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"

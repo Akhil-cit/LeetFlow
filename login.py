@@ -21,14 +21,16 @@ with sync_playwright() as p:
             user_data_dir=user_data_dir,
             headless=False,
             channel="chrome",
-            args=["--start-maximized"]
+            ignore_default_args=["--enable-automation"],
+            args=["--start-maximized", "--disable-blink-features=AutomationControlled"]
         )
     except Exception as e:
         print(f"Failed to launch Chrome. Falling back to Chromium... ({e})")
         browser = p.chromium.launch_persistent_context(
             user_data_dir=user_data_dir,
             headless=False,
-            args=["--start-maximized"]
+            ignore_default_args=["--enable-automation"],
+            args=["--start-maximized", "--disable-blink-features=AutomationControlled"]
         )
         
     page = browser.pages[0] if len(browser.pages) > 0 else browser.new_page()
