@@ -10,6 +10,6 @@ set SCRIPT_DIR=%~dp0
 schtasks /create /f /tn "LeetCodeDaily" /tr "wscript.exe \"%SCRIPT_DIR%run_invisible.vbs\"" /sc onlogon
 
 echo.
-echo Setup complete! The agent will now run invisibly in the background every day at 10:00 AM.
-echo IMPORTANT: Make sure your .env file is updated with your latest LEETCODE_SESSION cookie!
+echo Setup complete! The agent will now run invisibly in the background every time you turn on your PC.
+echo It will wait for your Wi-Fi to connect, and then solve the daily problem using your saved Chrome profile!
 pause
